@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Simple rule for a private family app: anyone with the app URL can
+    // read/write the one shared game-state document. Fine for a private
+    // link you only share with your own household.
+    match /families/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
