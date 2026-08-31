@@ -5,12 +5,12 @@ import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "firebase/firestor
 // 2. Click the </> (web) icon to register a web app, then copy the config
 //    object it gives you and paste it below, replacing everything here.
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyDOv7MUajxBgq3U-HaqbEvqFpl6xjKGgek",
+  authDomain: "ivaan-galaxy.firebaseapp.com",
+  projectId: "ivaan-galaxy",
+  storageBucket: "ivaan-galaxy.firebasestorage.app",
+  messagingSenderId: "592486700684",
+  appId: "1:592486700684:web:c0606860fe1a2b908f8da9"
 };
 
 const app = initializeApp(firebaseConfig);
