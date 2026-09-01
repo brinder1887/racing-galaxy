@@ -37,8 +37,8 @@ const REWARDS = [
 ];
 
 const MILESTONES = [
-  { id: "m1", name: "Go-Karting Session", rp: 75, emoji: "🏎️", desc: "Race real go-karts at the track — full speed ahead! Unlocked by your Rocket Points, no Fuel needed." },
-  { id: "m2", name: "Car Show or Movie Night", rp: 100, emoji: "🎬", desc: "Celebrate reaching Galaxy Hero with a car show visit or a movie night pick — your choice!" },
+  { id: "m2", name: "Car Show or Movie Night", rp: 75, emoji: "🎬", desc: "Celebrate your progress with a car show visit or a movie night pick — your choice!" },
+  { id: "m1", name: "Go-Karting Session", rp: 100, emoji: "🏎️", desc: "Race real go-karts at the track — full speed ahead! The ultimate Galaxy Hero prize." },
 ];
 
 const BANK_REWARD = { name: "VIP Go-Kart Day", fuel: 100, emoji: "🎉" };
@@ -62,7 +62,11 @@ function rankFor(rp) {
 }
 
 function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function weekKey(d) {
