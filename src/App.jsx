@@ -203,7 +203,7 @@ export default function RacingGalaxy() {
   };
 
   const buyShield = () => {
-    if (fuel < SHIELD_COST) return;
+    if (fuel < SHIELD_COST || shields > 0) return;
     setFuel((f) => f - SHIELD_COST);
     setShields((s) => s + 1);
     showToast("🛡️ Shield ready! Your streak is safe.");
@@ -227,7 +227,7 @@ export default function RacingGalaxy() {
   return (
     <div style={{
       fontFamily: "'Baloo 2', 'Fredoka', 'Comic Sans MS', sans-serif",
-      background: "linear-gradient(180deg, #1E3799 0%, #0984E3 35%, #FF9F43 75%, #FF4757 100%)",
+      backgroundColor: "#05060f",
       minHeight: "600px",
       color: "#2D1B4E",
       padding: "18px 14px 32px",
@@ -236,29 +236,28 @@ export default function RacingGalaxy() {
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Fredoka:wght@400;600&display=swap');
-        @keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes spinSlow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
         @keyframes popIn { 0%{transform:scale(.7);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
         @keyframes wiggle { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} }
         @keyframes shine { 0%{box-shadow:0 0 0px 0px currentColor} 50%{box-shadow:0 0 14px 3px currentColor} 100%{box-shadow:0 0 0px 0px currentColor} }
-        .float1 { animation: floaty 4s ease-in-out infinite; }
-        .float2 { animation: floaty 5s ease-in-out infinite 1s; }
-        .float3 { animation: floaty 3.5s ease-in-out infinite .5s; }
-        .spin-slow { animation: spinSlow 6s linear infinite; }
         .mission-card:active { transform: scale(0.96) rotate(-1deg); }
         .badge-unlocked { animation: shine 2.5s ease-in-out infinite; }
         .toast-pop { animation: popIn .35s cubic-bezier(.34,1.56,.64,1); }
         .wiggle-hover:hover { animation: wiggle .3s ease-in-out; }
+        .space-photo {
+          position: fixed; inset: 0; z-index: 0;
+          background-image: url('https://www.nasa.gov/wp-content/uploads/2023/03/15396342336_aab94b6c7f_k.jpg');
+          background-size: cover; background-position: center;
+        }
+        .space-overlay {
+          position: fixed; inset: 0; z-index: 0;
+          background: linear-gradient(180deg, rgba(5,6,20,0.35) 0%, rgba(5,6,20,0.55) 60%, rgba(5,6,20,0.75) 100%);
+        }
       `}</style>
 
-      <div className="float1" style={{ position: "absolute", top: 20, left: 10, fontSize: 26, opacity: 0.55 }}>⭐</div>
-      <div className="float2" style={{ position: "absolute", top: 70, right: 20, fontSize: 20, opacity: 0.5 }}>✨</div>
-      <div className="float3" style={{ position: "absolute", top: 160, left: 24, fontSize: 22, opacity: 0.45 }}>☁️</div>
-      <div className="float1" style={{ position: "absolute", top: 300, right: 14, fontSize: 24, opacity: 0.4 }}>🪐</div>
-      <div className="float2" style={{ position: "absolute", bottom: 60, left: 16, fontSize: 20, opacity: 0.45 }}>💫</div>
-      <div className="spin-slow" style={{ position: "absolute", top: 220, right: -10, fontSize: 34, opacity: 0.35 }}>🌟</div>
+      <div className="space-photo" />
+      <div className="space-overlay" />
 
-      <div style={{ position: "relative", maxWidth: 480, margin: "0 auto" }}>
+      <div style={{ position: "relative", maxWidth: 480, margin: "0 auto", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           <div style={{ fontSize: 26, fontWeight: 800, color: "#fff", textShadow: "2px 3px 0 #2D1B4E", lineHeight: 1.2 }}>
             🚀 Ivaan's Racing Galaxy 🏎️
@@ -320,11 +319,13 @@ export default function RacingGalaxy() {
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap", gap: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7BAE" }}>🎁 1 free shield every week!</div>
-                <button onClick={buyShield} disabled={fuel < SHIELD_COST} style={{
-                  background: fuel < SHIELD_COST ? "#E8E8F0" : "#2ECC71", color: fuel < SHIELD_COST ? "#A0A0B8" : "#fff",
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7BAE" }}>
+                  {shields > 0 ? "✅ You already have a shield ready!" : "🎁 1 free shield every week!"}
+                </div>
+                <button onClick={buyShield} disabled={fuel < SHIELD_COST || shields > 0} style={{
+                  background: (fuel < SHIELD_COST || shields > 0) ? "#E8E8F0" : "#2ECC71", color: (fuel < SHIELD_COST || shields > 0) ? "#A0A0B8" : "#fff",
                   border: "2px solid #2D1B4E", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700,
-                  cursor: fuel < SHIELD_COST ? "default" : "pointer", fontFamily: "'Baloo 2', sans-serif",
+                  cursor: (fuel < SHIELD_COST || shields > 0) ? "default" : "pointer", fontFamily: "'Baloo 2', sans-serif",
                 }}>
                   🛡️ Get Shield ({SHIELD_COST} 🔥)
                 </button>
@@ -583,10 +584,15 @@ function ComicCard({ children, color, style }) {
 
 function StatBubble({ emoji, label, value, color }) {
   return (
-    <div style={{ background: "#fff", border: "3px solid #2D1B4E", borderRadius: 16, padding: "10px 14px", boxShadow: "3px 3px 0 #2D1B4E" }}>
-      <div style={{ fontSize: 22, marginBottom: 4 }}>{emoji}</div>
-      <div style={{ fontSize: 17, fontWeight: 800, color }}>{value}</div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7BAE" }}>{label}</div>
+    <div style={{
+      background: "#fff", border: "3px solid #2D1B4E", borderRadius: 14, padding: "8px 12px",
+      boxShadow: "3px 3px 0 #2D1B4E", display: "flex", alignItems: "center", gap: 8,
+    }}>
+      <div style={{ fontSize: 20 }}>{emoji}</div>
+      <div style={{ lineHeight: 1.15 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color }}>{value}</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: "#8B7BAE" }}>{label}</div>
+      </div>
     </div>
   );
 }
