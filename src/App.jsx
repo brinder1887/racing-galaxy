@@ -23,7 +23,8 @@ const DEFAULT_TASKS = [
   { id: "t4b", name: "Write for 20 minutes", type: "mission", emoji: "✍️" },
   { id: "t5", name: "Help with chores", type: "mission", emoji: "🧹" },
   { id: "t6", name: "Do something kind", type: "boost", emoji: "💖" },
-  { id: "t7", name: "Play sports 30+ min", type: "boost", emoji: "⚽" },
+  { id: "t7", name: "Active play 20+ min (indoor OK!)", type: "boost", emoji: "🤸" },
+  { id: "t8", name: "Learn something new 15 min", type: "boost", emoji: "🧠" },
 ];
 
 const REWARDS = [
@@ -43,6 +44,8 @@ const MILESTONES = [
 
 const BANK_REWARD = { name: "VIP Go-Kart Day", fuel: 100, emoji: "🎉" };
 const SHIELD_COST = 2;
+const DAILY_BONUS_THRESHOLD = 5;
+const DAILY_BONUS_RP = 1;
 
 const BADGES = [
   { id: "b1", name: "First Launch", desc: "Finish 1 mission", emoji: "🚀", target: 1, get: (s) => s.totalCompleted, color: "#4FA8E0" },
@@ -98,6 +101,7 @@ export default function RacingGalaxy() {
   const [bankMode, setBankMode] = useState(false);
   const [infoOpen, setInfoOpen] = useState(null);
   const [claimedMilestones, setClaimedMilestones] = useState({});
+  const [bonusClaimedDate, setBonusClaimedDate] = useState(null);
 
   const applyRemote = (s) => {
     setFuel(s.fuel || 0);
@@ -112,6 +116,7 @@ export default function RacingGalaxy() {
     setPending(s.today === todayKey() ? s.pending || {} : {});
     setHistory(s.history || []);
     setClaimedMilestones(s.claimedMilestones || {});
+    setBonusClaimedDate(s.bonusClaimedDate || null);
     setShields(s.shields ?? 1);
     setLastFreeShieldWeek(s.lastFreeShieldWeek || null);
   };
@@ -140,9 +145,9 @@ export default function RacingGalaxy() {
     if (!loaded) return;
     saveState({
       fuel, rp, fuelBank, totalFuelBanked, shields, lastFreeShieldWeek, streak, lastCompleteDate,
-      totalCompleted, totalRedeemed, doneToday, pending, history, claimedMilestones, today: todayKey(),
+      totalCompleted, totalRedeemed, doneToday, pending, history, claimedMilestones, bonusClaimedDate, today: todayKey(),
     }).catch(() => {});
-  }, [fuel, rp, fuelBank, totalFuelBanked, shields, lastFreeShieldWeek, streak, lastCompleteDate, totalCompleted, totalRedeemed, doneToday, pending, history, claimedMilestones, loaded]);
+  }, [fuel, rp, fuelBank, totalFuelBanked, shields, lastFreeShieldWeek, streak, lastCompleteDate, totalCompleted, totalRedeemed, doneToday, pending, history, claimedMilestones, bonusClaimedDate, loaded]);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -164,7 +169,8 @@ export default function RacingGalaxy() {
       delete n[task.id];
       return n;
     });
-    setDoneToday((d) => ({ ...d, [task.id]: true }));
+    const newDoneToday = { ...doneToday, [task.id]: true };
+    setDoneToday(newDoneToday);
     setTotalCompleted((c) => c + 1);
     const today = todayKey();
     if (lastCompleteDate !== today) {
@@ -172,6 +178,15 @@ export default function RacingGalaxy() {
       setLastCompleteDate(today);
     }
     setHistory((h) => [{ name: task.name, fuel: mt.fuel, rp: mt.rp, date: today }, ...h].slice(0, 30));
+
+    // Bonus RP for completing several missions in one day, regardless of type —
+    // this rewards a full day of consistency without needing a big physical task.
+    const completedCount = Object.keys(newDoneToday).length;
+    if (completedCount >= DAILY_BONUS_THRESHOLD && bonusClaimedDate !== today) {
+      setRp((r) => r + DAILY_BONUS_RP);
+      setBonusClaimedDate(today);
+      setTimeout(() => showToast(`🎊 5 missions done! Bonus +${DAILY_BONUS_RP} Rocket Point!`), 500);
+    }
   };
 
   const reject = (task) => {
@@ -342,6 +357,14 @@ export default function RacingGalaxy() {
             </div>
 
             <SectionTitle emoji="🎯">Today's Missions</SectionTitle>
+            <div style={{
+              fontSize: 11, fontWeight: 700, color: "#fff", textShadow: "1px 1px 0 #2D1B4E",
+              marginTop: -6, marginBottom: 10,
+            }}>
+              {bonusClaimedDate === todayKey()
+                ? "🎊 Bonus Rocket Point claimed for today!"
+                : `🎯 ${Math.min(Object.keys(doneToday).length, DAILY_BONUS_THRESHOLD)}/${DAILY_BONUS_THRESHOLD} missions — finish ${DAILY_BONUS_THRESHOLD} for a bonus Rocket Point!`}
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
               {tasks.map((t) => {
                 const mt = MISSION_TYPES.find((m) => m.id === t.type);
@@ -370,241 +393,4 @@ export default function RacingGalaxy() {
 
             <ComicCard color="#00B8B0" style={{ marginBottom: 18 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ fontSize: 28 }}>🔐</div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 800 }}>Fuel Vault</div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#8B7BAE" }}>{fuelBank} 🔥 saved up</div>
-                  </div>
-                </div>
-                <button onClick={toggleBank} style={{
-                  background: "#00B8B0", color: "#fff", border: "2px solid #2D1B4E", borderRadius: 999, padding: "8px 14px",
-                  fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif",
-                }}>
-                  💰 Save today's Fuel
-                </button>
-              </div>
-              {fuelBank >= BANK_REWARD.fuel && (
-                <button onClick={redeemBank} style={{
-                  marginTop: 12, width: "100%", background: "#FF4757", color: "#fff", border: "2px solid #2D1B4E",
-                  borderRadius: 12, padding: "10px", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif",
-                }}>
-                  {BANK_REWARD.emoji} Redeem: {BANK_REWARD.name} ({BANK_REWARD.fuel}🔥)
-                </button>
-              )}
-            </ComicCard>
-
-            <SectionTitle emoji="🎁">Reward Store</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              {REWARDS.map((r) => {
-                const canAfford = fuel >= r.fuel;
-                return (
-                  <div key={r.id} style={{ position: "relative" }}>
-                    <button onClick={() => redeem(r)} disabled={!canAfford} className="mission-card" style={{
-                      width: "100%", background: canAfford ? "#fff" : "#F2F2F7", border: "3px solid #2D1B4E", borderRadius: 16,
-                      padding: 12, textAlign: "left", cursor: canAfford ? "pointer" : "default", opacity: canAfford ? 1 : 0.55,
-                      boxShadow: canAfford ? "3px 3px 0 #2D1B4E" : "none", fontFamily: "'Baloo 2', sans-serif",
-                    }}>
-                      <div style={{ fontSize: 30 }}>{r.emoji}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6, lineHeight: 1.3, paddingRight: 18 }}>{r.name}</div>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: "#FF4757", marginTop: 6 }}>
-                        {r.fuel} 🔥
-                      </div>
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setInfoOpen(r.id); }}
-                      style={{
-                        position: "absolute", top: 8, right: 8, width: 22, height: 22, borderRadius: "50%",
-                        background: "#2D1B4E", color: "#fff", border: "2px solid #fff", fontSize: 12, fontWeight: 800,
-                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
-                      }}
-                      aria-label="More info"
-                    >i</button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <SectionTitle emoji="🌟">Big Rocket Milestones</SectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-              {MILESTONES.map((m) => {
-                const eligible = rp >= m.rp;
-                const claimed = claimedMilestones[m.id];
-                const pct = Math.min(100, (rp / m.rp) * 100);
-                return (
-                  <ComicCard key={m.id} color={claimed ? "#2ECC71" : eligible ? "#FF9F43" : "#C8C8DC"}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ fontSize: 32, filter: claimed || eligible ? "none" : "grayscale(1) opacity(0.5)" }}>{m.emoji}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800 }}>{m.name}</div>
-                        <div style={{ fontSize: 11, fontWeight: 600, color: "#8B7BAE" }}>Needs {m.rp} Rocket Points</div>
-                      </div>
-                      {claimed ? (
-                        <span style={{ fontSize: 12, fontWeight: 800, color: "#2ECC71" }}>Claimed ✅</span>
-                      ) : eligible ? (
-                        <button onClick={() => claimMilestone(m)} style={{
-                          background: "#FF9F43", color: "#fff", border: "2px solid #2D1B4E", borderRadius: 999,
-                          padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif",
-                        }}>Claim!</button>
-                      ) : (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#9494AC" }}>{rp}/{m.rp} RP</span>
-                      )}
-                    </div>
-                    {!claimed && (
-                      <div style={{ height: 8, background: "#F0F0F5", borderRadius: 999, overflow: "hidden", marginTop: 10, border: "2px solid #2D1B4E" }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: eligible ? "#FF9F43" : "#C8C8DC", borderRadius: 999 }} />
-                      </div>
-                    )}
-                  </ComicCard>
-                );
-              })}
-            </div>
-
-            <SectionTitle emoji="🏅">Badge Collection</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
-              {BADGES.map((b) => {
-                const current = Math.min(b.get(badgeState), b.target);
-                const unlocked = current >= b.target;
-                const pct = Math.min(100, (current / b.target) * 100);
-                return (
-                  <div key={b.id} className={unlocked ? "badge-unlocked" : ""} style={{
-                    background: unlocked ? "#fff" : "#EDEDF5", border: `3px solid ${unlocked ? b.color : "#C8C8DC"}`, borderRadius: 16,
-                    padding: 10, textAlign: "center", color: b.color,
-                  }}>
-                    <div style={{
-                      fontSize: 30, marginBottom: 6, filter: unlocked ? "none" : "grayscale(1) opacity(0.5)",
-                      transform: unlocked ? "scale(1.05)" : "scale(1)",
-                    }}>{unlocked ? b.emoji : "🔒"}</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: unlocked ? "#2D1B4E" : "#9494AC", marginBottom: 2 }}>{b.name}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: "#9494AC", marginBottom: 6, lineHeight: 1.3, minHeight: 22 }}>{b.desc}</div>
-                    <div style={{ height: 6, background: "#fff", borderRadius: 999, overflow: "hidden", border: "1px solid #C8C8DC" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: unlocked ? b.color : "#C8C8DC", borderRadius: 999 }} />
-                    </div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: "#9494AC", marginTop: 4 }}>{current}/{b.target}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {view === "parent" && (
-          <>
-            <SectionTitle emoji="📋">Approvals Needed</SectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-              {Object.keys(pending).length === 0 && (
-                <ComicCard color="#2ECC71"><div style={{ fontSize: 13, fontWeight: 600 }}>✅ All clear, Captain! Nothing waiting.</div></ComicCard>
-              )}
-              {tasks.filter((t) => pending[t.id]).map((t) => {
-                const mt = MISSION_TYPES.find((m) => m.id === t.type);
-                return (
-                  <div key={t.id} style={{ background: "#fff", border: "3px solid #2D1B4E", borderRadius: 16, padding: 12, display: "flex", alignItems: "center", gap: 10, boxShadow: "3px 3px 0 #2D1B4E" }}>
-                    <div style={{ fontSize: 26 }}>{t.emoji}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 700 }}>{t.name}</div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: mt.color }}>{mt.label} · +{mt.fuel}🔥{mt.rp ? ` · +${mt.rp} RP` : ""}</div>
-                    </div>
-                    <button onClick={() => approve(t)} style={{ background: "#2ECC71", color: "#fff", border: "2px solid #2D1B4E", borderRadius: 10, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif" }}>✅ Approve</button>
-                    <button onClick={() => reject(t)} style={{ background: "#fff", color: "#8B7BAE", border: "2px solid #C8C8DC", borderRadius: 10, padding: "6px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif" }}>Not yet</button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <SectionTitle emoji="📊">Family Snapshot</SectionTitle>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              <StatBubble emoji="🔥" label="Fuel balance" value={fuel} color="#FF9F43" />
-              <StatBubble emoji={current.emoji} label="Rank" value={current.name} color={current.color} />
-              <StatBubble emoji="🔥" label="Streak" value={`${streak} days`} color="#FF4757" />
-              <StatBubble emoji="🔐" label="Fuel Vault" value={fuelBank} color="#00B8B0" />
-              <StatBubble emoji="🛡️" label="Shields" value={shields} color="#2ECC71" />
-              <StatBubble emoji="🏅" label="Badges" value={`${BADGES.filter((b) => b.get(badgeState) >= b.target).length}/${BADGES.length}`} color="#FF9F43" />
-              <StatBubble emoji="🌟" label="Milestones" value={`${Object.keys(claimedMilestones).length}/${MILESTONES.length}`} color="#FF4757" />
-            </div>
-
-            <SectionTitle emoji="🕓">Recent Activity</SectionTitle>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {history.length === 0 && <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>No approvals logged yet.</div>}
-              {history.map((h, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 600, color: "#fff", padding: "6px 10px", background: "rgba(255,255,255,0.15)", borderRadius: 10 }}>
-                  <span>{h.name}</span>
-                  <span>+{h.fuel}🔥{h.rp ? `, +${h.rp} RP` : ""}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {toast && (
-        <div className="toast-pop" style={{
-          position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
-          background: "#fff", color: "#2D1B4E", padding: "12px 20px", borderRadius: 999,
-          fontSize: 14, fontWeight: 800, border: "3px solid #2D1B4E", boxShadow: "4px 4px 0 #2D1B4E",
-          fontFamily: "'Baloo 2', sans-serif", maxWidth: "85%", textAlign: "center",
-        }}>
-          {toast}
-        </div>
-      )}
-
-      {infoOpen && (() => {
-        const r = REWARDS.find((x) => x.id === infoOpen);
-        if (!r) return null;
-        return (
-          <div onClick={() => setInfoOpen(null)} style={{
-            position: "fixed", inset: 0, background: "rgba(45,27,78,0.55)", display: "flex",
-            alignItems: "center", justifyContent: "center", zIndex: 50, padding: 24,
-          }}>
-            <div onClick={(e) => e.stopPropagation()} className="toast-pop" style={{
-              background: "#fff", borderRadius: 20, border: "3px solid #2D1B4E", boxShadow: "5px 5px 0 #2D1B4E",
-              padding: 20, maxWidth: 320, textAlign: "center", fontFamily: "'Baloo 2', sans-serif",
-            }}>
-              <div style={{ fontSize: 44 }}>{r.emoji}</div>
-              <div style={{ fontSize: 17, fontWeight: 800, color: "#2D1B4E", marginTop: 6 }}>{r.name}</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#8B7BAE", marginTop: 8, lineHeight: 1.4 }}>{r.desc}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#FF4757", marginTop: 10 }}>{r.fuel} 🔥</div>
-              <button onClick={() => setInfoOpen(null)} style={{
-                marginTop: 14, background: "#2D1B4E", color: "#fff", border: "none", borderRadius: 999,
-                padding: "8px 20px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Baloo 2', sans-serif",
-              }}>Got it!</button>
-            </div>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-function ComicCard({ children, color, style }) {
-  return (
-    <div style={{
-      background: "#fff", borderRadius: 20, padding: 16, border: `3px solid #2D1B4E`,
-      boxShadow: "4px 4px 0 #2D1B4E", borderTop: `6px solid ${color}`, ...style,
-    }}>
-      {children}
-    </div>
-  );
-}
-
-function StatBubble({ emoji, label, value, color }) {
-  return (
-    <div style={{
-      background: "#fff", border: "3px solid #2D1B4E", borderRadius: 14, padding: "8px 12px",
-      boxShadow: "3px 3px 0 #2D1B4E", display: "flex", alignItems: "center", gap: 8,
-    }}>
-      <div style={{ fontSize: 20 }}>{emoji}</div>
-      <div style={{ lineHeight: 1.15 }}>
-        <div style={{ fontSize: 15, fontWeight: 800, color }}>{value}</div>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "#8B7BAE" }}>{label}</div>
-      </div>
-    </div>
-  );
-}
-
-function SectionTitle({ children, emoji }) {
-  return (
-    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 10, textShadow: "1px 2px 0 #2D1B4E" }}>
-      {emoji} {children}
-    </div>
-  );
-}
+                <div style
